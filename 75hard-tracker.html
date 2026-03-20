@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>75 Hard Tracker</title>
+<meta name="theme-color" content="#0f0f0f">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#0f0f0f;color:#f0f0f0;min-height:100vh;display:flex;justify-content:center}
+#app{width:100%;max-width:480px;padding-bottom:80px}
+.card{background:#191919;border:0.5px solid rgba(255,255,255,0.08);border-radius:12px;padding:1rem 1.25rem;margin-bottom:12px}
+.mc{background:#222;border-radius:8px;padding:10px 12px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:16px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.btn{background:transparent;border:0.5px solid rgba(255,255,255,0.15);border-radius:8px;padding:8px 18px;cursor:pointer;font-size:14px;color:#f0f0f0}
+.btn-p{background:#f0f0f0;border:none;border-radius:8px;padding:10px 24px;cursor:pointer;font-size:14px;color:#0f0f0f;font-weight:500;width:100%}
+.pbar{height:6px;background:#222;border-radius:99px;overflow:hidden}
+.pfill{height:100%;border-radius:99px;transition:width 0.4s}
+input[type=text]{width:100%;padding:8px 12px;border:0.5px solid rgba(255,255,255,0.15);border-radius:8px;font-size:14px;background:#191919;color:#f0f0f0;outline:none}
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:#191919;border-top:0.5px solid rgba(255,255,255,0.08);display:flex;z-index:100}
+.nav-btn{flex:1;padding:10px 0 8px;background:transparent;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.82);display:flex;align-items:center;justify-content:center;z-index:200;padding:1.5rem}
+.modal{background:#191919;border-radius:16px;padding:1.5rem;max-width:360px;width:100%}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+const HABITS0=[{id:1,name:"Ejercicio (45 min)",icon:"💪"},{id:2,name:"Leer 10 páginas",icon:"📖"},{id:3,name:"Tomar 1 galón de agua",icon:"💧"},{id:4,name:"Dieta sin trampa",icon:"🥗"},{id:5,name:"Foto de progreso diaria",icon:"📸"},{id:6,name:"1h de CFI al día",icon:"📊"}];
+
+const WORKOUTS=[
+  {day:"Lunes",label:"Chest & Triceps",color:"#E24B4A",ex:[{n:"Bench Press",s:"4x8-10",t:"Baja controlado, explota arriba."},{n:"Incline DB Press",s:"3x10-12",t:"Enfoca la parte superior del pecho."},{n:"Cable Flyes",s:"3x12-15",t:"Stretch completo en la bajada."},{n:"Tricep Rope Pushdown",s:"3x12",t:"Codos fijos al cuerpo."},{n:"Overhead Tricep Extension",s:"3x10",t:"Rango completo de movimiento."},{n:"Weighted Dips",s:"3xfallo",t:"Inclínate al frente para pecho."}]},
+  {day:"Martes",label:"Back & Biceps",color:"#185FA5",ex:[{n:"Deadlift",s:"4x5-6",t:"Espalda neutra, empuja el suelo."},{n:"Pull-ups / Lat Pulldown",s:"4x8-10",t:"Pecho hacia la barra."},{n:"Seated Cable Row",s:"3x10-12",t:"Aprieta omóplatos al final."},{n:"Single-arm DB Row",s:"3x10 c/u",t:"Gira levemente el torso."},{n:"Barbell Curl",s:"3x10",t:"No balancees el cuerpo."},{n:"Hammer Curl",s:"3x12",t:"Trabaja braquial y antebrazo."}]},
+  {day:"Miércoles",label:"Legs & Glutes",color:"#3B6D11",ex:[{n:"Squat",s:"4x8-10",t:"Rodillas siguen los pies."},{n:"Romanian Deadlift",s:"3x10-12",t:"Siente el estiramiento en isquios."},{n:"Leg Press",s:"3x12-15",t:"No bloquees las rodillas."},{n:"Walking Lunges",s:"3x12 c/u",t:"Torso recto, paso largo."},{n:"Hip Thrust",s:"4x12",t:"Aprieta glúteos en el tope."},{n:"Calf Raises",s:"4x15-20",t:"Pausa de 1s arriba."}]},
+  {day:"Jueves",label:"Shoulders & Core",color:"#854F0B",ex:[{n:"Overhead Press",s:"4x8",t:"Core apretado, no arqueés la espalda."},{n:"Lateral Raises",s:"4x15",t:"Codos ligeramente flexionados."},{n:"Face Pulls",s:"3x15",t:"Esencial para salud del manguito."},{n:"Arnold Press",s:"3x10",t:"Rotación completa en el movimiento."},{n:"Plank",s:"3x60s",t:"Caderas alineadas."},{n:"Ab Wheel Rollout",s:"3x10",t:"Controla la bajada lentamente."}]},
+  {day:"Viernes",label:"Chest & Core Focus",color:"#993556",ex:[{n:"Weighted Push-ups",s:"5x10",t:"Volumen alto en pecho."},{n:"Cable Crossover",s:"4x15",t:"Contracción máxima al centro."},{n:"DB Pullover",s:"3x12",t:"Expande pecho, trabaja serrato."},{n:"Hanging Leg Raises",s:"4x12",t:"Sin balanceo, controlado."},{n:"Cable Crunch",s:"3x15",t:"Redondea la espalda al bajar."},{n:"Russian Twists",s:"3x20",t:"Pies levantados para más dificultad."}]},
+  {day:"Sábado",label:"Full Body HIIT",color:"#534AB7",ex:[{n:"Burpees",s:"4x15",t:"Explosivo en el salto."},{n:"Kettlebell Swings",s:"4x20",t:"Potencia desde las caderas."},{n:"Box Jumps",s:"3x10",t:"Aterriza suave, amortiguando."},{n:"Battle Ropes",s:"4x30s",t:"Alterna ondas y simultáneas."},{n:"Mountain Climbers",s:"3x30s",t:"Mantén caderas bajas."},{n:"Sprint Intervals",s:"8x20s/40s",t:"Intensidad máxima en cada sprint."}]},
+];
+
+const WISDOM={
+  5:{q:"5 días. La mayoría abandona aquí. Tú no.",w:"La acción precede a la motivación, no al revés. Empieza siempre aunque no tengas ganas.",tier:"epic"},
+  10:{q:"10 días perfectos. Ya eres parte del 1%.",w:"James Clear: 'No te elevas al nivel de tus metas, caes al nivel de tus sistemas.' Los tuyos funcionan.",tier:"legendary"},
+  15:{q:"15 días. Tu cerebro ya está recableándose.",w:"El dolor de la disciplina pesa onzas. El dolor del arrepentimiento pesa toneladas. — Jim Rohn",tier:"epic"},
+  20:{q:"20 días. El hábito ya vive en ti.",w:"Identidad sobre resultados. No estás 'intentando' ser saludable. Ya eres alguien saludable.",tier:"legendary"},
+  25:{q:"Un tercio del camino. Nadie te puede quitar lo que construiste.",w:"Naval: 'El juego más importante es el de la autoconfianza. Se gana cumpliendo promesas pequeñas.'",tier:"epic"},
+  30:{q:"30 días. Mes completo de excelencia.",w:"El compounding aplica a todo: dinero, músculo, conocimiento, carácter. Llevas 30 días de interés compuesto.",tier:"legendary"},
+  35:{q:"35 días. Casi la mitad. La montaña baja desde aquí.",w:"Memento mori. Cada día desperdiciado es irrecuperable. Tú no estás desperdiciando.",tier:"epic"},
+  40:{q:"40 días. Forjado en fuego y disciplina.",w:"Seneca: 'No es que tengamos poco tiempo, es que perdemos mucho.' Llevas 40 días sin perderlo.",tier:"legendary"},
+  45:{q:"45 días. Eres diferente al que empezó.",w:"La mitad de tu cerebro quiere sabotearte. La otra construyó esto. Escucha a la correcta.",tier:"epic"},
+  50:{q:"50 días. Dos tercios. Imparable.",w:"Charlie Munger: 'Todo lo que vale la pena tener requiere convertirte en alguien diferente para merecerlo.'",tier:"legendary"},
+  55:{q:"55 días. El mundo recompensa la ejecución consistente.",w:"Epicteto: 'La riqueza no es tener muchas posesiones, sino pocas necesidades.' Eres rico en disciplina.",tier:"epic"},
+  60:{q:"60 días. 15 más y cambias tu historia.",w:"El mundo no recompensa la intención. Recompensa la ejecución. Llevas 60 días ejecutando.",tier:"legendary"},
+  65:{q:"65 días. Los últimos 10 son los más importantes.",w:"En finanzas el retorno real está al final del período. En el 75 Hard también. Estos días valen doble.",tier:"epic"},
+  75:{q:"75 días. Lo lograste. Eres élite.",w:"Lo que aprendiste sobre ti mismo en estos 75 días vale más que cualquier título. Ahora: ¿qué sigue?",tier:"legendary"},
+};
+const DAILY_Q=["Un día más. Eso es todo lo que necesitas.","La disciplina es elegir lo que más quieres sobre lo que quieres ahora.","No es motivación. Es compromiso.","Cada rep cuenta. Cada página. Cada gota.","Tu yo futuro te lo agradecerá.","El cansancio es temporal. El orgullo es permanente.","Hoy es otro ladrillo en quien serás.","Los días difíciles definen el resultado.","Silencio, enfoque, ejecución.","No pares cuando estés cansado. Para cuando hayas terminado."];
+
+const TIER_C={common:"#888",epic:"#7F77DD",legendary:"#F5C400"};
+const TIER_L={common:"Común",epic:"Épico",legendary:"Legendario"};
+
+const toKey=d=>d.toISOString().split("T")[0];
+const today=()=>toKey(new Date());
+const load=()=>{try{const r=localStorage.getItem("75hv5");return r?JSON.parse(r):null;}catch{return null;}};
+const persist=s=>{try{localStorage.setItem("75hv5",JSON.stringify(s));}catch{}};
+
+let ST=load()||{screen:"setup",habits:HABITS0,startDate:null,log:{}};
+let TAB="today", WK=null, MODAL=null, NEW_H="", DRAFT=HABITS0.map(h=>({...h}));
+
+// Notifications — ask once
+if(ST.screen!=="setup"&&!localStorage.getItem("notif_asked")&&"Notification"in window){
+  Notification.requestPermission().then(()=>localStorage.setItem("notif_asked","1"));
+}
+// Nightly reminder
+function scheduleNotif(){
+  if(Notification.permission!=="granted")return;
+  const now=new Date(),r=new Date();r.setHours(21,0,0,0);
+  if(now>=r)r.setDate(r.getDate()+1);
+  setTimeout(()=>{
+    const tl=ST.log[today()]||{},p=ST.habits.filter(h=>!tl[h.id]).length;
+    if(p>0)new Notification("75 Hard",{body:`${p} hábito(s) pendientes hoy. ¡No rompas la racha!`});
+    scheduleNotif();
+  },r-now);
+}
+if(Notification.permission==="granted")scheduleNotif();
+
+function save(s){ST=s;persist(s);render();}
+
+function getStats(){
+  const {habits,startDate,log}=ST;
+  const tk=today();
+  const dayNum=!startDate?1:Math.max(1,Math.floor((new Date(tk)-new Date(startDate))/86400000)+1);
+  const cDay=Math.min(dayNum,75);
+  const tLog=log[tk]||{};
+  const allDone=habits.every(h=>tLog[h.id]);
+  const perfDays=Object.keys(log).filter(k=>habits.every(h=>log[k]?.[h.id])).length;
+  let streak=0;
+  if(startDate){const t=new Date(tk),d=new Date(startDate);while(d<=t){const k=toKey(d);if(habits.every(h=>log[k]?.[h.id]))streak++;else if(k!==tk)streak=0;d.setDate(d.getDate()+1);}}
+  return{tk,cDay,tLog,allDone,perfDays,streak};
+}
+
+function toggle(id){
+  const{tk,allDone,cDay}=getStats();
+  const updated={...ST.log,[tk]:{...(ST.log[tk]||{}),[id]:!ST.log[tk]?.[id]}};
+  const newSt={...ST,log:updated};
+  ST=newSt;persist(newSt);
+  const nowAll=ST.habits.every(h=>updated[tk]?.[h.id]);
+  if(nowAll&&!allDone){
+    const w=WISDOM[cDay];
+    MODAL=w?{day:cDay,...w}:{day:cDay,q:DAILY_Q[cDay%DAILY_Q.length],w:null,tier:"common"};
+  }
+  render();
+}
+
+// Heatmap data
+function getHeatmap(){
+  const yr=new Date().getFullYear();
+  const jan1=new Date(yr,0,1);
+  const off=jan1.getDay();
+  const cells=[];
+  for(let d=new Date(jan1);d.getFullYear()===yr;d.setDate(d.getDate()+1)){
+    const k=toKey(d),dl=ST.log[k]||{},done=ST.habits.filter(h=>dl[h.id]).length;
+    cells.push({k,date:new Date(d),done,perf:done===ST.habits.length&&done>0});
+  }
+  const nWeeks=Math.ceil((off+cells.length)/7);
+  const MNAMES=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  const mLbls=[];let lastM=-1;
+  cells.forEach((c,i)=>{const m=c.date.getMonth();if(m!==lastM){mLbls.push({col:Math.floor((off+i)/7),lbl:MNAMES[m]});lastM=m;}});
+  return{cells,off,nWeeks,mLbls,yr};
+}
+function hclr(c){if(!c.done)return"#222";const r=c.done/ST.habits.length;if(r<0.5)return"#0F6E56";if(r<1)return"#1D9E75";return"#5DCAA5";}
+
+function render(){
+  const app=document.getElementById("app");
+  if(ST.screen==="setup"){app.innerHTML=renderSetup();bindSetup();return;}
+  app.innerHTML=renderMain();bindMain();
+}
+
+function renderSetup(){
+  const rows=DRAFT.map((h,i)=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:${i<DRAFT.length-1?"0.5px solid rgba(255,255,255,0.08)":"none"}">
+      <span style="font-size:16px">${h.icon}</span>
+      <span style="flex:1;font-size:14px">${h.name}</span>
+      <button onclick="removeDraft(${h.id})" style="background:none;border:none;cursor:pointer;font-size:18px;color:#444;padding:0">×</button>
+    </div>`).join("");
+  return`<div style="padding:1.5rem 1rem">
+    <p style="font-size:22px;font-weight:500;margin-bottom:4px">75 Hard</p>
+    <p style="font-size:14px;color:#888;margin-bottom:24px">Define tus hábitos. Una vez que empieces, no los podrás cambiar.</p>
+    <div class="card">${rows}</div>
+    <div style="display:flex;gap:8px;margin-bottom:24px">
+      <input id="new-h" type="text" value="${NEW_H}" placeholder="Agregar hábito...">
+      <button class="btn" onclick="addDraft()">+</button>
+    </div>
+    <button class="btn-p" onclick="startProg()">Comenzar programa →</button>
+  </div>`;
+}
+
+function bindSetup(){
+  const inp=document.getElementById("new-h");
+  if(!inp)return;
+  inp.addEventListener("input",e=>NEW_H=e.target.value);
+  inp.addEventListener("keydown",e=>{if(e.key==="Enter")addDraft();});
+}
+
+function addDraft(){
+  if(!NEW_H.trim())return;
+  DRAFT.push({id:Date.now(),name:NEW_H.trim(),icon:"✅"});
+  NEW_H="";render();
+}
+function removeDraft(id){DRAFT=DRAFT.filter(h=>h.id!==id);render();}
+function startProg(){
+  if(!DRAFT.length)return;
+  save({screen:"tracker",habits:DRAFT,startDate:today(),log:{}});
+  if(!localStorage.getItem("notif_asked")&&"Notification"in window){
+    Notification.requestPermission().then(p=>{localStorage.setItem("notif_asked","1");if(p==="granted")scheduleNotif();});
+  }
+}
+
+function renderMain(){
+  const{cDay,tLog,allDone,perfDays,streak}=getStats();
+  const tabs=[{k:"today",i:"◎",l:"Hoy"},{k:"stats",i:"▦",l:"Stats"},{k:"battle",i:"★",l:"Pase"},{k:"workout",i:"⊕",l:"Gym"}];
+  const navHTML=tabs.map(n=>`
+    <button class="nav-btn" onclick="setTab('${n.k}')">
+      <span style="font-size:18px;color:${TAB===n.k?"#1D9E75":"#444"}">${n.i}</span>
+      <span style="font-size:10px;color:${TAB===n.k?"#1D9E75":"#444"};font-weight:${TAB===n.k?500:400}">${n.l}</span>
+    </button>`).join("");
+
+  let content="";
+  if(TAB==="today") content=renderToday(cDay,tLog,allDone,perfDays,streak);
+  else if(TAB==="stats") content=renderStats(cDay,perfDays,streak);
+  else if(TAB==="battle") content=renderBattle();
+  else if(TAB==="workout") content=renderGym();
+
+  const modalHTML=MODAL?renderModal():"";
+
+  return`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:1.25rem 1rem 0.5rem">
+      <div>
+        <p style="font-size:20px;font-weight:500;margin:0">75 Hard</p>
+        <p style="font-size:12px;color:#888;margin:0">Día ${cDay} · Racha ${streak} 🔥</p>
+      </div>
+      <button onclick="doReset()" style="background:transparent;border:0.5px solid rgba(226,75,74,0.35);border-radius:8px;padding:5px 12px;cursor:pointer;font-size:12px;color:#E24B4A">Reiniciar</button>
+    </div>
+    <div style="padding:0.75rem 1rem 16px">${content}</div>
+    <div class="bottom-nav">${navHTML}</div>
+    ${modalHTML}`;
+}
+
+function renderToday(cDay,tLog,allDone,perfDays,streak){
+  const prog=Math.round((cDay/75)*100);
+  const habitRows=ST.habits.map((h,i)=>{
+    const done=!!tLog[h.id];
+    const chk=done
+      ?`<div onclick="toggle(${h.id})" style="width:26px;height:26px;border-radius:8px;background:#1D9E75;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 7l4 4 6-6" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>`
+      :`<div onclick="toggle(${h.id})" style="width:26px;height:26px;border-radius:8px;border:1.5px solid rgba(255,255,255,0.15);cursor:pointer;flex-shrink:0"></div>`;
+    return`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:${i<ST.habits.length-1?"0.5px solid rgba(255,255,255,0.08)":"none"}">
+      ${chk}
+      <span style="font-size:16px">${h.icon}</span>
+      <span style="font-size:14px;flex:1;color:${done?"#444":"#f0f0f0"};text-decoration:${done?"line-through":"none"}">${h.name}</span>
+    </div>`;
+  }).join("");
+  return`
+    <div class="grid3">
+      ${[{l:"Racha",v:streak,u:" días"},{l:"Perfectos",v:perfDays,u:`/${cDay}`},{l:"Avance",v:prog,u:"%"}].map(m=>`
+        <div class="mc"><div style="font-size:11px;color:#888;margin-bottom:4px">${m.l}</div><div style="font-size:22px;font-weight:500">${m.v}<span style="font-size:11px;color:#888">${m.u}</span></div></div>`).join("")}
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+        <span style="color:#888">Día ${cDay} de 75</span><span style="font-weight:500">${prog}%</span>
+      </div>
+      <div class="pbar"><div class="pfill" style="width:${prog}%;background:#f0f0f0"></div></div>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span style="font-size:14px;font-weight:500">Hábitos de hoy</span>
+        ${allDone?`<span style="font-size:11px;padding:2px 10px;border-radius:99px;background:rgba(29,158,117,0.15);color:#5DCAA5">Completado ✓</span>`:""}
+      </div>
+      ${habitRows}
+      <p style="font-size:12px;color:#444;text-align:center;margin-top:10px">${allDone?"🔥 Día perfecto.":ST.habits.filter(h=>!tLog[h.id]).length+" pendiente(s)"}</p>
+    </div>`;
+}
+
+function renderStats(cDay,perfDays,streak){
+  const{cells,off,nWeeks,mLbls,yr}=getHeatmap();
+  const cs=11,cg=2,svgW=nWeeks*(cs+cg),svgH=7*(cs+cg)+18;
+  const rectEls=cells.map((c,i)=>{
+    const col=Math.floor((off+i)/7),row=(off+i)%7;
+    const op=c.date>new Date()?0.25:1;
+    return`<rect x="${col*(cs+cg)}" y="${14+row*(cs+cg)}" width="${cs}" height="${cs}" rx="2" fill="${hclr(c)}" opacity="${op}"/>`;
+  }).join("");
+  const mEls=mLbls.map(m=>`<text x="${m.col*(cs+cg)}" y="10" font-size="9" fill="#888">${m.lbl}</text>`).join("");
+  const habitBars=ST.habits.map(h=>{
+    const done=Object.keys(ST.log).filter(k=>ST.log[k]?.[h.id]).length;
+    const p=Math.round((done/Math.max(cDay,1))*100);
+    const col=p>=80?"#1D9E75":p>=50?"#EF9F27":"#E24B4A";
+    return`<div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>${h.icon} ${h.name}</span><span style="font-weight:500">${p}%</span></div>
+      <div class="pbar"><div class="pfill" style="width:${p}%;background:${col}"></div></div>
+    </div>`;
+  }).join("");
+  return`
+    <div class="card">
+      <p style="font-size:14px;font-weight:500;margin-bottom:12px">Actividad ${yr}</p>
+      <div style="overflow-x:auto">
+        <svg width="${svgW}" height="${svgH}">${mEls}${rectEls}</svg>
+      </div>
+      <div style="display:flex;gap:14px;margin-top:8px;font-size:11px;color:#888">
+        ${[["Sin datos","#222"],["Parcial","#1D9E75"],["Perfecto","#5DCAA5"]].map(([l,c])=>`<span><span style="display:inline-block;width:9px;height:9px;background:${c};border-radius:2px;margin-right:3px"></span>${l}</span>`).join("")}
+      </div>
+    </div>
+    <div class="card"><p style="font-size:14px;font-weight:500;margin-bottom:12px">Cumplimiento por hábito</p>${habitBars}</div>
+    <div class="grid2">
+      ${[{l:"Racha",v:streak+" días"},{l:"Perfectos",v:perfDays},{l:"Cumplimiento",v:Math.round((perfDays/Math.max(cDay,1))*100)+"%"},{l:"Restantes",v:Math.max(0,75-cDay+1)}].map(m=>`
+        <div class="mc"><div style="font-size:11px;color:#888;margin-bottom:4px">${m.l}</div><div style="font-size:20px;font-weight:500">${m.v}</div></div>`).join("")}
+    </div>`;
+}
+
+function renderBattle(){
+  const secs=[
+    {key:"legendary",lbl:"Legendario 🏆",days:[10,20,30,40,50,60,75]},
+    {key:"epic",lbl:"Épico ⚡",days:[5,15,25,35,45,55,65]},
+    {key:"common",lbl:"Diario ✦",days:Array.from({length:75},(_,i)=>i+1).filter(d=>!WISDOM[d])},
+  ];
+  return`<p style="font-size:13px;color:#888;margin-bottom:16px">Completa días perfectos para desbloquear recompensas.</p>`+
+  secs.map(sec=>{
+    const items=sec.days.map(d=>{
+      const dk=ST.startDate?toKey(new Date(new Date(ST.startDate).getTime()+(d-1)*86400000)):null;
+      const u=dk&&ST.habits.every(h=>ST.log[dk]?.[h.id]);
+      const bg=u?(sec.key==="legendary"?"rgba(245,196,0,0.1)":sec.key==="epic"?"rgba(127,119,221,0.12)":"rgba(255,255,255,0.04)"):"#222";
+      const icon=u?(sec.key==="legendary"?"🏆":sec.key==="epic"?"⚡":"✦"):"🔒";
+      return`<div onclick="${u?`openBP(${d})`:""}" style="width:44px;height:44px;border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid ${u?TIER_C[sec.key]:"rgba(255,255,255,0.08)"};background:${bg};cursor:${u?"pointer":"default"};opacity:${u?1:0.35}">
+        <span style="font-size:9px;color:${u?TIER_C[sec.key]:"#444"};font-weight:500">D${d}</span>
+        <span style="font-size:14px">${icon}</span>
+      </div>`;
+    }).join("");
+    return`<div style="margin-bottom:20px">
+      <p style="font-size:12px;font-weight:500;color:${TIER_C[sec.key]};margin-bottom:10px;letter-spacing:1px;text-transform:uppercase">${sec.lbl}</p>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">${items}</div>
+    </div>`;
+  }).join("");
+}
+
+function openBP(d){
+  const w=WISDOM[d];
+  MODAL=w?{day:d,...w}:{day:d,q:DAILY_Q[d%DAILY_Q.length],w:null,tier:"common"};
+  render();
+}
+
+function renderGym(){
+  if(WK!==null){
+    const w=WORKOUTS[WK];
+    const exRows=w.ex.map((e,i)=>`
+      <div style="padding:10px 0;border-bottom:${i<w.ex.length-1?"0.5px solid rgba(255,255,255,0.08)":"none"}">
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+          <span style="font-size:14px;font-weight:500">${e.n}</span>
+          <span style="font-size:12px;color:${w.color};font-weight:500">${e.s}</span>
+        </div>
+        <p style="font-size:12px;color:#888;margin:0">💡 ${e.t}</p>
+      </div>`).join("");
+    return`
+      <button onclick="setWk(null)" class="btn" style="margin-bottom:16px;font-size:13px">← Volver</button>
+      <div class="card" style="border-color:${w.color}66">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <div style="width:10px;height:10px;border-radius:50%;background:${w.color};flex-shrink:0"></div>
+          <div><p style="font-size:16px;font-weight:500;margin:0">${w.label}</p><p style="font-size:12px;color:#888;margin:0">${w.day}</p></div>
+        </div>
+        ${exRows}
+      </div>`;
+  }
+  const dow=new Date().getDay();
+  const cards=WORKOUTS.map((w,i)=>{
+    const isToday=[1,2,3,4,5,6][i]===dow;
+    return`<div onclick="setWk(${i})" class="card" style="border-color:${isToday?w.color+"99":"rgba(255,255,255,0.08)"};cursor:pointer;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:36px;height:36px;border-radius:8px;background:${w.color}22;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <div style="width:10px;height:10px;border-radius:50%;background:${w.color}"></div>
+        </div>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+            <span style="font-size:14px;font-weight:500">${w.label}</span>
+            ${isToday?`<span style="font-size:10px;padding:1px 8px;border-radius:99px;background:${w.color}30;color:${w.color}">Hoy</span>`:""}
+          </div>
+          <span style="font-size:12px;color:#888">${w.day} · ${w.ex.length} ejercicios</span>
+        </div>
+        <span style="color:#444;font-size:20px">›</span>
+      </div>
+    </div>`;
+  }).join("");
+  return`
+    <p style="font-size:13px;color:#888;margin-bottom:16px">6 días/semana · Pérdida de grasa + masa muscular</p>
+    ${cards}
+    <div class="card" style="background:#222"><p style="font-size:12px;color:#888;margin:0;text-align:center">Domingo — Descanso activo o stretching 🧘</p></div>`;
+}
+
+function renderModal(){
+  const m=MODAL;
+  return`<div class="overlay" onclick="closeModal()">
+    <div class="modal" onclick="event.stopPropagation()" style="border:1px solid ${TIER_C[m.tier]}44">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <span style="font-size:11px;font-weight:500;color:${TIER_C[m.tier]};text-transform:uppercase;letter-spacing:1px">${TIER_L[m.tier]} · Día ${m.day}</span>
+        <button onclick="closeModal()" style="background:none;border:none;cursor:pointer;color:#444;font-size:22px;line-height:1;padding:0">×</button>
+      </div>
+      <p style="font-size:17px;font-weight:500;line-height:1.55;color:#f0f0f0;margin-bottom:${m.w?16:0}px">${m.q}</p>
+      ${m.w?`<div style="height:1px;background:rgba(255,255,255,0.08);margin:14px 0"></div>
+        <p style="font-size:11px;color:${TIER_C[m.tier]};font-weight:500;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">Super Wisdom</p>
+        <p style="font-size:13px;color:#888;line-height:1.7;margin:0">${m.w}</p>`:""}
+    </div>
+  </div>`;
+}
+
+function setTab(t){TAB=t;if(t!=="workout")WK=null;render();}
+function setWk(i){WK=i;render();}
+function closeModal(){MODAL=null;render();}
+function doReset(){if(window.confirm("¿Reiniciar? Se perderá todo el progreso.")){save({screen:"setup",habits:HABITS0,startDate:null,log:{}});DRAFT=HABITS0.map(h=>({...h}));TAB="today";WK=null;}}
+
+render();
+
+if("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("./sw.js").catch(()=>{});
+}
+</script>
+</body>
+</html>
